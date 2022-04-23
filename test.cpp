@@ -578,7 +578,9 @@ int main(int argc, char **argv)
     open_device();
     init_device();
 
-    init_avi(req_width, req_height);
+    init_avi(req_width, req_height, 30, req_format == V4L2_PIX_FMT_YUYV ?
+             YUYV : NV12);
+
     start_capturing();
     mainloop();
     stop_capturing();

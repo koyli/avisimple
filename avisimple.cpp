@@ -32,7 +32,7 @@ namespace AviFileWriter {
     int fd;
     int file_length;
     
-    void init_avi(int w, int h, int fps) {
+    void init_avi(int w, int h, int fps, int format) {
 
         file_length = sizeof(block); 
 
@@ -75,12 +75,18 @@ namespace AviFileWriter {
         block.strf.biWidth = w;
         block.strf.biHeight = h;
         block.strf.biPlanes = 1;
-        block.strf.biBitCount = 8 * 2;
-        block.strf.biSizeImage = w * h * block.strf.biBitCount ;
-        //        block.strf.biCompression = {'M','J','P','G'};
-        block.strf.biCompression = {'Y','U','Y', '2'};
-        block.strh.dwSuggestedBufferSize = 128000;
-        block.avih.dsSuggestedBufferSize = 128000;
+
+        switch (format) {
+        case YUYV:
+            block.strf.biBitCount = 8 * 2;
+            block.strf.biCompression = {'Y','U','Y', '2'};
+            break;
+        case NV12:
+            block.strf.biBitCount = 12;
+            block.strf.biCompression = {'M','J','P', 'G'};
+            break;
+        }            
+        block.strf.biSizeImage = w * h * block.strf.biBitCount / 8 ;
         
         block.movi.LIST = {'L', 'I', 'S', 'T'};
         block.movi.listType = {'m', 'o', 'v', 'i'};
@@ -95,17 +101,6 @@ namespace AviFileWriter {
         else return '0' + c;
     }
 
-    void addImage(const char filename[]) {
-       char* addr = imageChunks + block.movi.listSize;
-       int imageSize = 0;
-       FOURCC * addrFourCC = (FOURCC*) addr;
-       *addrFourCC = {'0', '0', 'd', 'c'};
-       DWORD * addrSize = (DWORD*) addr + sizeof(FOURCC);
-       *addrSize = imageSize;
-       
-       block.movi.listSize += imageSize || 0x3;
-       
-    }
 
     void writeHeaderHex() {
         for (int i = 0 ; i < sizeof(block); ++i) {

@@ -3,6 +3,12 @@ typedef short WORD;
 typedef int DWORD;
 typedef DWORD LONG;
 
+enum {
+    YUYV = 0,
+    NV12 = 1
+};
+
+
 typedef struct {
     DWORD dwWidth;
     DWORD dwHeight;
@@ -115,7 +121,7 @@ typedef struct _avioldindex {
 
 namespace AviFileWriter {
 
-    void init_avi(int w, int h, int fps = 30);    
+    void init_avi(int w, int h, int fps = 30, int format = YUYV);
     void writeHeader();
 
     void writeHeaderHex();
