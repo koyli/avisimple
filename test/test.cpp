@@ -578,7 +578,14 @@ int main(int argc, char **argv)
     open_device();
     init_device();
 
-    init_avi(req_width, req_height, 30, req_format == V4L2_PIX_FMT_YUYV ?
+    std::string pattern = "video-capXXXXXX.avi";
+    char pattern_copy[pattern.length() + 1];
+    memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);
+    if ((fd = mkstemps(pattern_copy, 4)) == -1) {
+        close(fd);
+    }
+
+    init_avi(pattern_copy, req_width, req_height, 30, req_format == V4L2_PIX_FMT_YUYV ?
              YUYV : NV12);
 
     start_capturing();

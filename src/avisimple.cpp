@@ -6,6 +6,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef ARDUINO
+#include <SD.h>
+#endif
 
 namespace AviFileWriter {
 
@@ -29,20 +32,22 @@ namespace AviFileWriter {
 
     char imageChunks[MAX_CHUNKS_SIZE];
     
+#ifndef ARDUINO
     int fd;
+#else
+    File fd;
+#endif
     int file_length;
     
-    void init_avi(int w, int h, int fps, int format) {
+    void init_avi(const char filename[], int w, int h, int fps, int format) {
 
         file_length = sizeof(block); 
 
-        std::string pattern = "video-capXXXXXX.avi";
-        char pattern_copy[pattern.length() + 1];
-        memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);
-        if ((fd = mkstemps(pattern_copy, 4)) == -1) {
-            std::cerr << "Error opening temp file" << std::endl;
-            exit(1);
-        }
+#ifndef ARDUINO
+        fd = open(filename, O_RDWR);
+#else
+        fd = SD.open(filename, FILE_WRITE);
+#endif
         block.header.RIFF = {'R', 'I', 'F', 'F' };
         block.header.fileType = {'A', 'V', 'I', ' ' };
         block.header.fileSize = sizeof(block) - 8 + block.movi.listSize;
@@ -101,7 +106,7 @@ namespace AviFileWriter {
         else return '0' + c;
     }
 
-
+#ifndef ARDUINO
     void writeHeaderHex() {
         for (int i = 0 ; i < sizeof(block); ++i) {
             switch (i) {
@@ -126,7 +131,8 @@ namespace AviFileWriter {
             if (3 == (i & 0x3))std::cout << std::endl;
         }
     }
-
+#endif
+    
     void writeHeader() {
         lseek(fd, 0, SEEK_SET);
         write(fd, reinterpret_cast<char*> (&block), sizeof(block));

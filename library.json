@@ -1,0 +1,17 @@
+{
+    "name" : "avisimple",
+    "version" : "1.0.0",
+    "description" : "Simple Arduino/Linux friendly AVI writer",
+    "repository" :
+    {
+        "type" : "git",
+        "url" : "https://github.com/koyli/avisimple"
+    },
+    "dependencies" : {
+    },
+    "license" : "MIT",
+    "platforms" : "*",
+    "frameworks" : "*"
+}
+        
+   
