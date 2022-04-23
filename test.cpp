@@ -68,7 +68,7 @@ static string output_name;
 static int req_width = 0;
 static int req_height = 0;
 static int req_format = V4L2_PIX_FMT_YUYV; // yuy2
-static int req_rate_numerator   = 60;
+static int req_rate_numerator   = 30;
 static int req_rate_denominator = 1;
 
 static void errno_exit(const char *s)
@@ -90,19 +90,6 @@ static int xioctl(int fh, int request, void *arg)
 
 static void process_image(const void *p, int size)
 {
-    frame_number++;
-    char filename[PATH_MAX];
-    snprintf(filename, PATH_MAX-1, output_name.c_str(), frame_number);
-    FILE *fp = fopen(filename,"wb");
-
-    if (fp) {
-        fwrite(p, size, 1, fp);
-        fflush(fp);
-        fclose(fp);
-    } else {
-        errno_exit("process_image");
-    }
-
     addFrame(p, size);
 }
 

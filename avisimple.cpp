@@ -36,10 +36,13 @@ namespace AviFileWriter {
 
         file_length = sizeof(block); 
 
-        std::string pattern = "video-capXXXXXX";
+        std::string pattern = "video-capXXXXXX.avi";
         char pattern_copy[pattern.length() + 1];
         memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);
-        fd = mkstemp(pattern_copy);
+        if ((fd = mkstemps(pattern_copy, 4)) == -1) {
+            std::cerr << "Error opening temp file" << std::endl;
+            exit(1);
+        }
         block.header.RIFF = {'R', 'I', 'F', 'F' };
         block.header.fileType = {'A', 'V', 'I', ' ' };
         block.header.fileSize = sizeof(block) - 8 + block.movi.listSize;
@@ -62,6 +65,7 @@ namespace AviFileWriter {
         block.strhh = {'s', 't', 'r', 'h' };
         block.strhs = sizeof(block.strh);
         block.strh.fccType = {'v', 'i', 'd', 's' };
+        block.strh.fccHandler = {'M', 'J', 'P', 'G' };
         block.strh.dwScale = 1;
         block.strh.dwRate = fps;
         
@@ -71,9 +75,12 @@ namespace AviFileWriter {
         block.strf.biWidth = w;
         block.strf.biHeight = h;
         block.strf.biPlanes = 1;
-        block.strf.biBitCount = 8 * 3;
-        block.strf.biSizeImage = 0;
-        block.strf.biCompression = {'M','J','P','G'};
+        block.strf.biBitCount = 8 * 2;
+        block.strf.biSizeImage = w * h * block.strf.biBitCount ;
+        //        block.strf.biCompression = {'M','J','P','G'};
+        block.strf.biCompression = {'Y','U','Y', '2'};
+        block.strh.dwSuggestedBufferSize = 128000;
+        block.avih.dsSuggestedBufferSize = 128000;
         
         block.movi.LIST = {'L', 'I', 'S', 'T'};
         block.movi.listType = {'m', 'o', 'v', 'i'};
@@ -92,10 +99,9 @@ namespace AviFileWriter {
        char* addr = imageChunks + block.movi.listSize;
        int imageSize = 0;
        FOURCC * addrFourCC = (FOURCC*) addr;
-       *addrFourCC = {'0', '0', 'd', 'b'};
+       *addrFourCC = {'0', '0', 'd', 'c'};
        DWORD * addrSize = (DWORD*) addr + sizeof(FOURCC);
        *addrSize = imageSize;
-
        
        block.movi.listSize += imageSize || 0x3;
        
@@ -147,7 +153,6 @@ namespace AviFileWriter {
         block.avih.dwTotalFrames++;
         block.strh.dwLength++;
         writeHeader();
-        writeHeaderHex();
     }
     
         
