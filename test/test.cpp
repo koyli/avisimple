@@ -581,8 +581,9 @@ int main(int argc, char **argv)
     std::string pattern = "video-capXXXXXX.avi";
     char pattern_copy[pattern.length() + 1];
     memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);
-    if ((fd = mkstemps(pattern_copy, 4)) == -1) {
-        close(fd);
+    int fd_temp;
+    if ((fd_temp = mkstemps(pattern_copy, 4)) == -1) {
+        close(fd_temp);
     }
 
     init_avi(pattern_copy, req_width, req_height, 30, req_format == V4L2_PIX_FMT_YUYV ?
