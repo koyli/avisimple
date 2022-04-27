@@ -12,7 +12,6 @@
 
 
 
-RIFFHeader header;
 
 using namespace AviFileWriter;
 /*
