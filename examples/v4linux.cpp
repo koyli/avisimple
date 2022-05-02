@@ -578,7 +578,7 @@ int main(int argc, char **argv)
     open_device();
     init_device();
 
-    std::string pattern = "video-capXXXXXX.avi";
+    std::string pattern = "/tmp/video-capXXXXXX.avi";
     char pattern_copy[pattern.length() + 1];
     memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);
     int fd_temp;
