@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/ioctl.h>
-#include <linux/videodev2.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -44,9 +42,6 @@ using namespace AviFileWriter;
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
-
-#include <linux/limits.h>
-#include <linux/videodev2.h>
 
 using namespace std;
 
@@ -89,7 +84,6 @@ static int xioctl(int fh, int request, void *arg)
 
 static void process_image(const void *p, int size)
 {
-    printf("adding frame: %d bytes\n", size);
     addFrame(p, size);
 }
 
@@ -418,163 +412,38 @@ static void open_device(void)
     }
 }
 
-static void usage(FILE *fp, int argc, char **argv)
-{
-    fprintf(fp,
-             "Usage: %s [options]\n\n"
-             "Version 1.3\n"
-             "Options:\n"
-             "-d | --device name   Video device name [%s]\n"
-             "-h | --help          Print this message\n"
-             "-s | --size size     Video size in format WIDTHxHEIGHT\n"
-             "-f | --format format 'yuy2' [default] or 'nv12'\n"
-             "-r | --rate rate     Setup frame rate [60]\n"
-             "-o | --output output Outputs stream to stdout, format string is supported\n"
-             "-c | --count count   Number of frames to grab [%i]\n"
-             "",
-             argv[0], dev_name, frame_count);
-}
+#define TEST_COUNT 3
+const char testfiles[TEST_COUNT] = { "test/1.yuv", "test/2.yuv", "test/3.yuv" };
 
-static const char short_options[] = "d:ho:f:s:c:r:";
-
-static const struct option
-long_options[] = {
-        { "device", required_argument, nullptr, 'd' },
-        { "help",   no_argument,       nullptr, 'h' },
-        { "size",   required_argument, nullptr, 's' },
-        { "format", required_argument, nullptr, 'f' },
-        { "rate",   required_argument, nullptr, 'r' },
-        { "output", required_argument, nullptr, 'o' },
-        { "count",  required_argument, nullptr, 'c' },
-        { 0, 0, 0, 0 }
-};
+char* images[TEST_COUNT];
 
 int main(int argc, char **argv)
 {
-    dev_name = "/dev/video0";
+    req_format = V4L2_PIX_FMT_NV12;
+    req_width = 720;
+    req_height = 350;
 
-    for (;;) {
-        int idx;
-        int c;
 
-        c = getopt_long(argc, argv,
-                        short_options, long_options, &idx);
 
-        if (-1 == c)
-                break;
 
-        switch (c) {
-            case 0: /* getopt_long() flag */
-                break;
 
-            case 'd':
-                dev_name = optarg;
-                break;
-
-            case 'h':
-                usage(stdout, argc, argv);
-                exit(EXIT_SUCCESS);
-
-            case 'o':
-                output_name = optarg;
-                break;
-
-            case 'f':
-                if (strcmp(optarg, "yuy2") == 0) {
-                    req_format = V4L2_PIX_FMT_YUYV;
-                } else if (strcmp(optarg, "nv12") == 0) {
-                    req_format = V4L2_PIX_FMT_NV12;
-                } else {
-                    fprintf(stderr, "Unknown format: %s\n", optarg);
-                    exit(EXIT_FAILURE);
-                }
-                break;
-
-            case 's':
-            {
-                errno = 0;
-                char *endptr = nullptr;
-                req_width = strtol(optarg, &endptr, 10);
-                if (errno)
-                    errno_exit(optarg);
-
-                if (*endptr == '\0') {
-                    fprintf(stderr, "unknown size: %s\n", optarg);
-                    exit(EXIT_FAILURE);
-                }
-
-                errno = 0;
-                req_height = strtol(endptr+1, nullptr, 10);
-                if (errno)
-                    errno_exit(optarg);
-
-                break;
-            }
-
-            case 'r':
-            {
-                errno = 0;
-                char *endptr = nullptr;
-                req_rate_numerator = strtol(optarg, &endptr, 0);
-                if (errno)
-                    errno_exit(optarg);
-
-                if (*endptr == '\0') {
-                    req_rate_denominator = 1;
-                } else {
-                    errno = 0;
-                    req_rate_denominator = strtol(endptr+1, nullptr, 10);
-                    if (errno)
-                        errno_exit(optarg);
-                }
-
-                break;
-            }
-
-            case 'c':
-                errno = 0;
-                frame_count = strtol(optarg, nullptr, 0);
-                if (errno)
-                    errno_exit(optarg);
-                break;
-
-            default:
-                usage(stderr, argc, argv);
-                exit(EXIT_FAILURE);
+    for (int i= 0; i < TEST_COUNT; ++i) {
+        int fd;
+        struct stat st;
+        fd = open(testfiles[i], O_RDONLY);
+        if (fd < 0) {
+            fprintf(stderr, "missing input file");
+            exit(-1);
         }
+        fstat(fd, &st);
+        images[i] = calloc(st.st_size, 1);
+        int r = read(fd, images[i], st.st_size);
+        if (r < st.st_size) {
+            fprintf(stderr, "short read of input file");
+            exit(-1);
+        }
+            
     }
-
-    fprintf(stdout,
-            "device: %s\n"
-            "output: %s\n"
-            "size:   %dx%d\n"
-            "rate:   %d/%d\n",
-            dev_name,
-            output_name.c_str(),
-            req_width, req_height,
-            req_rate_numerator, req_rate_denominator);
-
-    bool invalid = false;
-    if (!req_width || !req_height) {
-        fprintf(stderr, "size can't be zero\n");
-        invalid = true;
-    }
-
-    if (!req_rate_denominator || !req_rate_numerator) {
-        fprintf(stderr, "rate can't be zero\n");
-        invalid = true;
-    }
-
-    if (output_name.empty()) {
-        fprintf(stderr, "output_name can't be empty\n");
-        invalid = true;
-    }
-
-    if (invalid)
-        exit(EXIT_FAILURE);
-
-
-
     open_device();
     init_device();
 
