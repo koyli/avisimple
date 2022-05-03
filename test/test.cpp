@@ -8,9 +8,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
-
-
 using namespace AviFileWriter;
 /*
  *  V4L2 video capture example
@@ -103,9 +100,6 @@ int main(int argc, char **argv)
 {
     req_width = 720;
     req_height = 350;
-
-
-
 
 
     for (int i= 0; i < TEST_COUNT; ++i) {
