@@ -277,7 +277,7 @@ namespace AviFileWriter {
     }
     
     void close() {
-        SD_MMC.close(fd);
+        fd.close();
     }
 }
 
