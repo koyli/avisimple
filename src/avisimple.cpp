@@ -156,9 +156,11 @@ namespace AviFileWriter {
     File fd;
 #endif
     int file_length;
-    
+#ifdef ARDUINO    
+    File init_avi(const char filename[], int w, int h, int fps, int format) {
+#else
     int init_avi(const char filename[], int w, int h, int fps, int format) {
-
+#endif        
         file_length = sizeof(block); 
 
 #ifndef ARDUINO
