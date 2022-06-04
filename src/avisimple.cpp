@@ -265,7 +265,7 @@ namespace AviFileWriter {
         write(fd, header, sizeof(header));
         write(fd, (const char*) &size, sizeof(int));
         write(fd, (const char*) p, size);
-        int pad = (size & 3) ? ((size | 3) + 1)  : size;
+        int pad = ((size & 3) ? ((size | 3) + 1)  : 0) + size;
         write(fd, padding, pad - size);
         file_length += pad  + 8;
         block.movi.listSize = file_length - sizeof(block);
