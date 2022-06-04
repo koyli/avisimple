@@ -277,7 +277,11 @@ namespace AviFileWriter {
     }
     
     void close() {
+#ifdef ARDUINO
         fd.close();
+#else
+        close(fd);
+#endif
     }
 }
 
