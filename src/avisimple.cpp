@@ -252,6 +252,12 @@ namespace AviFileWriter {
         }
     }
 #endif
+
+
+#ifdef ARDUINO
+#define lseek(fd, a, b) fd.seek(a, b)
+#define write(fd, a, b) fd.write(a, b)
+#endif
     
     void writeHeader() {
         lseek(fd, 0, SEEK_SET);
@@ -273,7 +279,7 @@ namespace AviFileWriter {
         
         block.avih.dwTotalFrames++;
         block.strh.dwLength++;
-        writeHeader();
+        //        writeHeader();
     }
     
     void close() {
