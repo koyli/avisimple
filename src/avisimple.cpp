@@ -157,7 +157,7 @@ namespace AviFileWriter {
 #endif
     int file_length;
     
-    void init_avi(const char filename[], int w, int h, int fps, int format) {
+    int init_avi(const char filename[], int w, int h, int fps, int format) {
 
         file_length = sizeof(block); 
 
@@ -166,6 +166,8 @@ namespace AviFileWriter {
 #else
         fd = SD.open(filename, FILE_WRITE);
 #endif
+        if (fd < 0) return fd;
+        
         block.header.RIFF = {'R', 'I', 'F', 'F' };
         block.header.fileType = {'A', 'V', 'I', ' ' };
         block.header.fileSize = sizeof(block) - 8 + block.movi.listSize;
@@ -214,7 +216,7 @@ namespace AviFileWriter {
         block.movi.LIST = {'L', 'I', 'S', 'T'};
         block.movi.listType = {'m', 'o', 'v', 'i'};
         block.movi.listSize = 0;
-
+        return fd;
     };
     
     char hex(unsigned char c)
