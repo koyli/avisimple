@@ -256,11 +256,11 @@ namespace AviFileWriter {
 
 #ifdef ARDUINO
 #define lseek(fd, a, b) fd.seek(a, b)
-#define write(fd, a, b) fd.write(a, b)
+#define write(fd, a, b) fd.write((const uint8_t*) (a), b)
 #endif
     
     void writeHeader() {
-        lseek(fd, 0, SEEK_SET);
+        lseek(fd, 0);
         write(fd, reinterpret_cast<char*> (&block), sizeof(block));
     }
 
