@@ -2,7 +2,7 @@
 #include <cstring>
 
 #ifdef ARDUINO
-#include <SD.h>
+#include <SD_MMC.h>
 #else
 #include <fstream>
 #include <iostream>
@@ -164,7 +164,7 @@ namespace AviFileWriter {
 #ifndef ARDUINO
         fd = open(filename, O_RDWR);
 #else
-        fd = SD.open(filename, FILE_WRITE);
+        fd = SD_MMC.open(filename, FILE_WRITE);
 #endif
         if (fd < 0) return fd;
         
