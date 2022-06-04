@@ -257,6 +257,7 @@ namespace AviFileWriter {
 #ifdef ARDUINO
 #define lseek(fd, a, b) fd.seek(a, b)
 #define write(fd, a, b) fd.write((const uint8_t*) (a), b)
+#define SEEK_END SeekMode::SeekEnd
 #endif
     
     void writeHeader() {
