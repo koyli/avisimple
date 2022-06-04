@@ -1,3 +1,7 @@
+#ifdef ARDUINO
+#include <SD_MMC.h>
+#endif
+
 enum {
     YUYV = 0,
     NV12 = 1
@@ -7,7 +11,11 @@ enum {
 
 namespace AviFileWriter {
 
+#ifdef ARDUINO
+    File init_avi(const char filename[], int w, int h, int fps = 30, int format = YUYV);
+#else
     int init_avi(const char filename[], int w, int h, int fps = 30, int format = YUYV);
+#endif
     void writeHeader();
     void close();
 #ifndef ARDUINO
