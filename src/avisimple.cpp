@@ -167,8 +167,9 @@ namespace AviFileWriter {
         fd = open(filename, O_RDWR);
 #else
         fd = SD_MMC.open(filename, FILE_WRITE);
+        if (!fd) return fd;
+
 #endif
-        if (fd < 0) return fd;
         
         block.header.RIFF = {'R', 'I', 'F', 'F' };
         block.header.fileType = {'A', 'V', 'I', ' ' };
