@@ -17,7 +17,7 @@ typedef unsigned char BYTE;
 typedef short WORD;
 typedef int DWORD;
 typedef DWORD LONG;
-
+#define AVIF_HASINDEX 0x00000010
 
 typedef struct {
     DWORD dwWidth;
@@ -115,19 +115,6 @@ typedef struct _tag_size_combine {
     DWORD size;
 } TagHeader;
 
-typedef struct {
-    DWORD dwChunkId;
-    DWORD dwFlags;
-    DWORD dwOffset;
-    DWORD dwSize;
-  } _avioldindex_entry, AVIOLDINDEX_ENTRY;
-
-typedef struct _avioldindex {
-  FOURCC             fcc;
-  DWORD              cb;
-  _avioldindex_entry aIndex[];
-} AVIOLDINDEX;
-
 namespace AviFileWriter {
 
     struct SimpleAviHeaderBlock {
@@ -146,14 +133,14 @@ namespace AviFileWriter {
         LISTHeader movi;
     } block;
 
-    #define MAX_CHUNKS_SIZE 1000000
+    int index_size = 0;   
 
-    char imageChunks[MAX_CHUNKS_SIZE];
     
 #ifndef ARDUINO
     int fd;
+    int fd_idx;
 #else
-    File fd;
+    File fd, fd_idx;
 #endif
     int file_length;
 #ifdef ARDUINO    
@@ -165,10 +152,21 @@ namespace AviFileWriter {
 
 #ifndef ARDUINO
         fd = open(filename, O_RDWR);
+        std::string pattern = "/tmp/video-XXXXXX.idx";
+        char pattern_copy[pattern.length() + 1];
+        memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);
+        if ((fd_idx = mkstemps(pattern_copy, 4)) == -1) {
+            return -1;
+        }
+
 #else
         fd = SD_MMC.open(filename, FILE_WRITE);
-        if (!fd) return fd;
+        fd_idx = SD_MMC.open("/vid.idx", FILE_WRITE);
 
+        if (!fd || !fd_idx) {
+            Serial.println("Failed to open file for writing");
+            return fd;
+        }
 #endif
         
         block.header.RIFF = {'R', 'I', 'F', 'F' };
@@ -177,7 +175,7 @@ namespace AviFileWriter {
 
         block.hdrl.LIST = {'L', 'I', 'S', 'T' };
         block.hdrl.listType = {'h', 'd', 'r', 'l' };
-        block.hdrl.listSize = (char*) &block.movi - (char*) &block.avih;
+        block.hdrl.listSize = (char*) &block.movi - (char*) &block.avih + sizeof(block.hdrl.listSize);
 
         block.avih.fcc = {'a', 'v', 'i', 'h' };
         block.avih.cb = sizeof(MainAVIHeader) - 8;
@@ -185,10 +183,11 @@ namespace AviFileWriter {
         block.avih.dwWidth = w;
         block.avih.dwHeight = h;
         block.avih.dwMicroSecPerFrame = 10e6 / fps;
+        block.avih.dwFlags |= AVIF_HASINDEX;
         
         block.strl.LIST = {'L', 'I', 'S', 'T' };
         block.strl.listType = {'s', 't', 'r', 'l' };
-        block.strl.listSize = (char*) &block.movi - (char*) &block.strhh;
+        block.strl.listSize = (char*) &block.movi - (char*) &block.strhh + sizeof(block.strl.listType);
 
         block.strhh = {'s', 't', 'r', 'h' };
         block.strhs = sizeof(block.strh);
@@ -206,8 +205,9 @@ namespace AviFileWriter {
 
         switch (format) {
         case YUYV:
-            block.strf.biBitCount = 8 * 2;
-            block.strf.biCompression = {'Y','U','Y', '2'};
+            block.strf.biBitCount = 8 * 3;
+            block.strf.biCompression = {'M','J','P', 'G'};
+            //block.strf.biCompression = {'Y','U','Y', '2'};
             break;
         case NV12:
             block.strf.biBitCount = 12;
@@ -218,7 +218,9 @@ namespace AviFileWriter {
         
         block.movi.LIST = {'L', 'I', 'S', 'T'};
         block.movi.listType = {'m', 'o', 'v', 'i'};
-        block.movi.listSize = 0;
+        block.movi.listSize = sizeof(block.movi.listSize);
+
+        writeHeader();
         return fd;
     };
     
@@ -260,6 +262,7 @@ namespace AviFileWriter {
 #ifdef ARDUINO
 #define lseek(fd, a, b) fd.seek(a, b)
 #define write(fd, a, b) fd.write((const uint8_t*) (a), b)
+#define read(fd, a, b) fd.read((uint8_t*) (a), b)
 #undef SEEK_END
 #undef SEEK_SET
 #define SEEK_END SeekMode::SeekEnd
@@ -268,30 +271,75 @@ namespace AviFileWriter {
     
     void writeHeader() {
         lseek(fd, 0, SEEK_SET);
+
+
         write(fd, reinterpret_cast<char*> (&block), sizeof(block));
     }
 
     void addFrame(const void*p, int size) {
         const char padding[] = {0,0,0,0};
         const char header[] = {'0', '0', 'd', 'c'};
+        const char idx1[] = { 'i', 'd', 'x', '1' };
+
+        index_size += 4 * 4;
+            
+        int offset = block.movi.listSize - 4;        
+        lseek(fd_idx, 0, SEEK_SET);
+        write(fd_idx, idx1, 4);
+        write(fd_idx, &index_size, 4);
+              
+        lseek(fd_idx, 0, SEEK_END);
+        write(fd_idx, header, sizeof(header));
+        write(fd_idx, padding, 4);
+
+        write(fd_idx, &offset, 4);
+        write(fd_idx, &size, 4);
+
         lseek(fd, 0, SEEK_END);
         write(fd, header, sizeof(header));
         write(fd, (const char*) &size, sizeof(int));
         write(fd, (const char*) p, size);
-        int pad = ((size & 3) ? ((size | 3) + 1)  : 0) + size;
+        int pad = (size & 3) ? ((size  | 3) + 1)  : size;
         write(fd, padding, pad - size);
         file_length += pad  + 8;
-        block.movi.listSize = file_length - sizeof(block);
+        block.movi.listSize = file_length - sizeof(block) + sizeof(block.movi.listSize);
         block.header.fileSize = file_length;
         
         block.avih.dwTotalFrames++;
         block.strh.dwLength++;
-        //        writeHeader();
+
+        if (block.avih.dwTotalFrames ^ 0x3f == 0) {
+            // every 64 frame, write header again
+            writeHeader();
+        }
+
+
     }
-    
+
+    void addIndex() {
+        lseek(fd, 0, SEEK_END);
+        fd_idx.close();
+        fd_idx = SD_MMC.open("/vid.idx", FILE_READ);
+
+        lseek(fd_idx, 0, SEEK_SET);
+        uint8_t buff[256];
+        int bytes_read = 0;
+
+        while ((bytes_read = read(fd_idx, buff, 256)) > 0)
+            write(fd, buff, bytes_read);
+        
+        block.header.fileSize += index_size + 8;
+        
+
+    }
     void close() {
+        addIndex();
+        writeHeader();
+
 #ifdef ARDUINO
+        
         fd.close();
+        fd_idx.close();
 #else
         close(fd);
 #endif
