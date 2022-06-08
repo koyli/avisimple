@@ -263,7 +263,6 @@ namespace AviFileWriter {
 #define lseek(fd, a, b) fd.seek(a, b)
 #define write(fd, a, b) fd.write((const uint8_t*) (a), b)
 #define read(fd, a, b) fd.read((uint8_t*) (a), b)
-#define close(fd) fd.close()
 #undef SEEK_END
 #undef SEEK_SET
 #define SEEK_END SeekMode::SeekEnd
