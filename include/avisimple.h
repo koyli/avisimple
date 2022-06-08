@@ -17,7 +17,7 @@ namespace AviFileWriter {
     int init_avi(const char filename[], int w, int h, int fps = 30, int format = YUYV);
 #endif
     void writeHeader();
-    void close();
+    void closeAvi();
 #ifndef ARDUINO
     void writeHeaderHex();
 #endif

@@ -263,6 +263,7 @@ namespace AviFileWriter {
 #define lseek(fd, a, b) fd.seek(a, b)
 #define write(fd, a, b) fd.write((const uint8_t*) (a), b)
 #define read(fd, a, b) fd.read((uint8_t*) (a), b)
+#define close(fd) fd.close()
 #undef SEEK_END
 #undef SEEK_SET
 #define SEEK_END SeekMode::SeekEnd
@@ -318,8 +319,11 @@ namespace AviFileWriter {
 
     void addIndex() {
         lseek(fd, 0, SEEK_END);
-        fd_idx.close();
+
+#ifdef ARDUINO
+        close(fd_idx);
         fd_idx = SD_MMC.open("/vid.idx", FILE_READ);
+#endif
 
         lseek(fd_idx, 0, SEEK_SET);
         uint8_t buff[256];
@@ -332,12 +336,11 @@ namespace AviFileWriter {
         
 
     }
-    void close() {
+    void closeAvi() {
         addIndex();
         writeHeader();
 
 #ifdef ARDUINO
-        
         fd.close();
         fd_idx.close();
 #else
