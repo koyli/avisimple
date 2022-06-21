@@ -161,6 +161,9 @@ namespace AviFileWriter {
 
 #else
         fd = SD_MMC.open(filename, FILE_WRITE);
+        if (SD_MMC.exists("/vid.idx"))
+            SD_MMC.remove("/vid.idx");
+            
         fd_idx = SD_MMC.open("/vid.idx", FILE_WRITE);
 
         if (!fd || !fd_idx) {
@@ -277,30 +280,38 @@ namespace AviFileWriter {
     }
 
     void addFrame(const void*p, int size) {
+
+
         const char padding[] = {0,0,0,0};
         const char header[] = {'0', '0', 'd', 'c'};
         const char idx1[] = { 'i', 'd', 'x', '1' };
-
+        const char terminator[] = { 0xff, 0xd9 };
         index_size += 4 * 4;
-            
-        int offset = block.movi.listSize - 4;        
+
+        const uint8_t* pp =         (const uint8_t*) p;
+        
+        int offset = file_length;
         lseek(fd_idx, 0, SEEK_SET);
         write(fd_idx, idx1, 4);
         write(fd_idx, &index_size, 4);
               
-        lseek(fd_idx, 0, SEEK_END);
-        write(fd_idx, header, sizeof(header));
-        write(fd_idx, padding, 4);
-
-        write(fd_idx, &offset, 4);
-        write(fd_idx, &size, 4);
-
         lseek(fd, 0, SEEK_END);
+
+        int write_size = size;
+
+        if (size >= 2 && pp[size - 1] != terminator[1] && pp[size - 2] != terminator[0])
+            {
+                write_size += 2;
+            }
         write(fd, header, sizeof(header));
-        write(fd, (const char*) &size, sizeof(int));
+        write(fd, (const char*) &write_size, sizeof(int));
         write(fd, (const char*) p, size);
-        int pad = (size & 3) ? ((size  | 3) + 1)  : size;
-        write(fd, padding, pad - size);
+
+        if (write_size != size)
+            write(fd, (const char*) terminator, 2);
+        
+        int pad = (write_size & 3) ? ((write_size  | 3) + 1)  : write_size;
+        write(fd, padding, pad - write_size);
         file_length += pad  + 8;
         block.movi.listSize = file_length - sizeof(block) + sizeof(block.movi.listSize);
         block.header.fileSize = file_length;
@@ -313,6 +324,12 @@ namespace AviFileWriter {
             writeHeader();
         }
 
+        lseek(fd_idx, 0, SEEK_END);
+        write(fd_idx, header, sizeof(header));
+        write(fd_idx, padding, 4);
+
+        write(fd_idx, &offset, 4);
+        write(fd_idx, &write_size, 4);
 
     }
 
@@ -320,8 +337,17 @@ namespace AviFileWriter {
         lseek(fd, 0, SEEK_END);
 
 #ifdef ARDUINO
-        close(fd_idx);
+        if (!fd_idx)
+            Serial.println("error - index null " );
+        Serial.println("Closing videos to add..");
+
+        fd_idx.close();
+
+        Serial.println("Opening videos to add..");
+
         fd_idx = SD_MMC.open("/vid.idx", FILE_READ);
+
+        Serial.println("Closed videos to add..");
 #endif
 
         lseek(fd_idx, 0, SEEK_SET);
@@ -333,14 +359,21 @@ namespace AviFileWriter {
         
         block.header.fileSize += index_size + 8;
         
-
+        fd_idx.close();
+        fd_idx = SD_MMC.open("/vid.idx", FILE_WRITE);
+        if (!fd_idx)
+            Serial.println("error - index null " );
     }
     void closeAvi() {
+        Serial.print("Add index..");
         addIndex();
+        Serial.print("writeHeader..");
         writeHeader();
-
+        
 #ifdef ARDUINO
+        Serial.print("Closing main..");
         fd.close();
+        Serial.print("Closing idx..");
         fd_idx.close();
 #else
         close(fd);
