@@ -153,7 +153,7 @@ namespace AviFileWriter {
         file_length = sizeof(block); 
 
 #ifndef ARDUINO
-        fd = open(filename, O_RDWR);
+        fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR );
         std::string pattern = "/tmp/video-XXXXXX.idx";
         char pattern_copy[pattern.length() + 1];
         memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);

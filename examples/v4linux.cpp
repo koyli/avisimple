@@ -578,15 +578,7 @@ int main(int argc, char **argv)
     open_device();
     init_device();
 
-    std::string pattern = "/tmp/video-capXXXXXX.avi";
-    char pattern_copy[pattern.length() + 1];
-    memcpy(pattern_copy, pattern.c_str(), pattern.length() + 1);
-    int fd_temp;
-    if ((fd_temp = mkstemps(pattern_copy, 4)) == -1) {
-        close(fd_temp);
-    }
-
-    init_avi(pattern_copy, req_width, req_height, 30, req_format == V4L2_PIX_FMT_YUYV ?
+    init_avi(output_name.c_str(), req_width, req_height, 30, req_format == V4L2_PIX_FMT_YUYV ?
              YUYV : NV12);
 
     start_capturing();
@@ -594,24 +586,12 @@ int main(int argc, char **argv)
     stop_capturing();
     uninit_device();
     close_device();
+
+    
     fprintf(stderr, "\n");
-    writeHeader();
+
+    closeAvi();
     return 0;
 }
 
 
-// int main(int argc, char** argv) {
-
-//     unsigned int dataSize = 0;
-
-//     init();
-//     if (argc > 1 && strcmp(argv[1], "-hex")== 0)
-//         writeHeaderHex();
-//     else
-//         writeHeader();
-
-
-//     int fd = open("/dev/video0", O_RDWR);
-
-//     return 0;
-// }
