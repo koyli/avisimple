@@ -3,6 +3,7 @@
 
 #ifdef ARDUINO
 #include <SD_MMC.h>
+#define DEBUG(x) Serial.println(x)
 #else
 #include <fstream>
 #include <iostream>
@@ -10,6 +11,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+#define DEBUG(x) printf(x)
 #endif
 
 
@@ -167,7 +169,7 @@ namespace AviFileWriter {
         fd_idx = SD_MMC.open("/vid.idx", FILE_WRITE);
 
         if (!fd || !fd_idx) {
-            Serial.println("Failed to open file for writing");
+            DEBUG("Failed to open file for writing");
             return fd;
         }
 #endif
@@ -285,7 +287,7 @@ namespace AviFileWriter {
         const char padding[] = {0,0,0,0};
         const char header[] = {'0', '0', 'd', 'c'};
         const char idx1[] = { 'i', 'd', 'x', '1' };
-        const char terminator[] = { 0xff, 0xd9 };
+        const char terminator[] = { (char)0xff,(char) 0xd9 };
         index_size += 4 * 4;
 
         const uint8_t* pp =         (const uint8_t*) p;
@@ -338,16 +340,12 @@ namespace AviFileWriter {
 
 #ifdef ARDUINO
         if (!fd_idx)
-            Serial.println("error - index null " );
-        Serial.println("Closing videos to add..");
+            DEBUG("error - index null " );
 
         fd_idx.close();
 
-        Serial.println("Opening videos to add..");
-
         fd_idx = SD_MMC.open("/vid.idx", FILE_READ);
 
-        Serial.println("Closed videos to add..");
 #endif
 
         lseek(fd_idx, 0, SEEK_SET);
@@ -358,22 +356,24 @@ namespace AviFileWriter {
             write(fd, buff, bytes_read);
         
         block.header.fileSize += index_size + 8;
-        
+
+#ifdef ARDUINO
         fd_idx.close();
         fd_idx = SD_MMC.open("/vid.idx", FILE_WRITE);
         if (!fd_idx)
-            Serial.println("error - index null " );
+            DEBUG("error - index null " );
+#else
+        
+#endif
+
     }
     void closeAvi() {
-        Serial.print("Add index..");
+        DEBUG("Add index..");
         addIndex();
-        Serial.print("writeHeader..");
         writeHeader();
         
 #ifdef ARDUINO
-        Serial.print("Closing main..");
         fd.close();
-        Serial.print("Closing idx..");
         fd_idx.close();
 #else
         close(fd);
