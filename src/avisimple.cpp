@@ -211,8 +211,8 @@ namespace AviFileWriter {
         switch (format) {
         case YUYV:
             block.strf.biBitCount = 8 * 3;
-            block.strf.biCompression = {'M','J','P', 'G'};
-            //block.strf.biCompression = {'Y','U','Y', '2'};
+            //            block.strf.biCompression = {'M','J','P', 'G'};
+            block.strf.biCompression = {'Y','U','Y', '2'};
             break;
         case NV12:
             block.strf.biBitCount = 12;
